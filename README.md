@@ -57,7 +57,6 @@ Cancel bookings (based on booking status)
 
 Getting Started (Local Setup)
 1️⃣ Clone the Repository
-git clone https://github.com/your-username/bus-booking-system.git
 cd bus-booking-system
 
 2️⃣ Create .env File

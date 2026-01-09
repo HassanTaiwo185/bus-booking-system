@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Schedule | Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card { border-radius: 12px; }
+        .card-header { border-radius: 12px 12px 0 0 !important; }
+    </style>
+</head>
+<body>
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="card shadow border-0">
+        <div class="card-header bg-success text-white p-3 text-center">
+            <h5 class="mb-0" th:text="${schedule.id == null ? 'Create Bus Schedule' : 'Update Bus Schedule'}"></h5>
+        </div>
+
+        <div class="card-body p-4">
+            <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+            <form th:action="@{/bus-schedules/bus/save}" th:object="${schedule}" method="post">
+                <input type="hidden" th:field="*{id}" />
+
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Select Bus</label>
+                        <select th:field="*{busId}" class="form-select" th:errorclass="is-invalid">
+                            <option value="">-- Choose available bus --</option>
+                            <option th:each="b : ${buses}"
+                                    th:value="${b.id}"
+                                    th:text="${b.busNumber + ' (' + b.type + ')'}"></option>
+                        </select>
+                        <div class="invalid-feedback" th:errors="*{busId}"></div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Select Route Stop</label>
+                        <select th:field="*{routeStopId}" class="form-select" th:errorclass="is-invalid">
+                            <option value="">-- Choose Route & Stop --</option>
+                            <option th:each="rs : ${routeStops}"
+                                    th:value="${rs.id}"
+                                    th:text="${rs.routeName + ' - ' + rs.stopName + ' (Order: ' + rs.stopOrder + ')'}">
+                            </option>
+                        </select>
+                        <div class="invalid-feedback" th:errors="*{routeStopId}"></div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Schedule Date</label>
+                        <input type="date" th:field="*{scheduleDate}" class="form-control" th:errorclass="is-invalid">
+                        <div class="invalid-feedback" th:errors="*{scheduleDate}"></div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Departure Time</label>
+                        <input type="time" th:field="*{departureTime}" class="form-control" th:errorclass="is-invalid">
+                        <div class="invalid-feedback" th:errors="*{departureTime}"></div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Ticket Price</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="text" step="0.01" th:field="*{price}" class="form-control" th:errorclass="is-invalid" placeholder="0.00">
+                        </div>
+                        <div class="invalid-feedback d-block" th:errors="*{price}"></div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-between">
+                    <a href="/bus-schedules/bus/list" class="btn btn-outline-secondary px-4">Cancel</a>
+                    <button type="submit" class="btn btn-success px-4"
+                            th:text="${schedule.id == null ? 'Save Schedule' : 'Update Schedule'}"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

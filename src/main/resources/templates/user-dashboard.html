@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>User Dashboard | Bus System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-success shadow-sm mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="#"><i class="bi bi-bus-front-fill me-2"></i>GreenBus</a>
+        <div class="d-flex align-items-center">
+            <span class="text-white me-3 d-none d-md-inline">
+                Welcome, <strong th:text="${#authentication.principal.firstName}">User</strong>
+            </span>
+            <form th:action="@{/api/v1/auth/logout}" method="post">
+                <button type="submit" class="btn btn-light btn-sm text-success fw-bold rounded-pill px-3">
+                    Sign Out
+                </button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div th:if="${success}" class="alert alert-success bg-white border-0 border-start border-4 border-success shadow-sm alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2 text-success"></i>
+        <span class="text-dark" th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-success fw-bold">
+                            <i class="bi bi-calendar3 me-2"></i>Available Journeys
+                        </h5>
+                        <span class="badge bg-success" th:text="${#lists.size(schedules)} + ' Found'">0 Found</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-4 py-3">Bus Info</th>
+                                <th class="py-3">Route Details</th>
+                                <th class="py-3">Departure</th>
+                                <th class="py-3">Fare</th>
+                                <th class="text-end pe-4 py-3">Option</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="s : ${schedules}">
+                                <td class="ps-4">
+                                    <div class="text-dark fw-bold" th:text="${s.bus.busNumber}"></div>
+                                    <div class="badge bg-light text-success border border-success border-opacity-25" th:text="${s.bus.type}"></div>
+                                </td>
+
+                                <td>
+                                    <div class="fw-bold text-success" th:text="${s.routeStop.route.routeName}"></div>
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-success text-decoration-none fw-semibold"
+                                            data-bs-toggle="modal" th:data-bs-target="'#routeModal' + ${s.id}">
+                                        <i class="bi bi-pin-map"></i> <span th:text="${s.routeStop.stop.stopName}"></span>
+                                    </button>
+
+                                    <div class="modal fade" th:id="'routeModal' + ${s.id}" tabindex="-1">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content border-0">
+                                                <div class="modal-header bg-success text-white">
+                                                    <h5 class="modal-title"><i class="bi bi-map me-2"></i>Full Route Plan</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body p-0">
+                                                    <ul class="list-group list-group-flush">
+                                                        <li th:each="stopObj : ${s.routeStop.route.routeStops}"
+                                                            class="list-group-item d-flex justify-content-between align-items-center py-3"
+                                                            th:classappend="${stopObj.id == s.routeStop.id ? 'bg-light border-start border-4 border-success' : ''}">
+                                                            <div>
+                                                                <span class="text-success fw-bold me-2" th:text="${stopObj.stopOrder} + '.'"></span>
+                                                                <span th:text="${stopObj.stop.stopName}" th:classappend="${stopObj.id == s.routeStop.id ? 'fw-bold' : ''}"></span>
+                                                            </div>
+                                                            <span th:if="${stopObj.id == s.routeStop.id}" class="badge rounded-pill bg-success">Your Selection</span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="text-dark fw-medium" th:text="${#temporals.format(s.scheduleDate, 'dd MMM')}"></div>
+                                    <div class="small text-muted" th:text="${s.departureTime}"></div>
+                                </td>
+
+                                <td>
+                                    <span class="text-success fw-bold fs-5" th:text="${'$' + s.price}"></span>
+                                </td>
+
+                                <td class="text-end pe-4">
+                                    <a th:href="@{/bookings/new(scheduleId=${s.id})}"
+                                       class="btn btn-success btn-sm px-4 rounded-pill fw-bold shadow-sm">
+                                        Book
+                                    </a>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3">Your Account</h6>
+                    <div class="d-grid gap-2">
+                        <a th:href="@{/bookings/my-history}" class="btn btn-outline-success text-start border-0 py-2">
+                            <i class="bi bi-ticket-detailed me-2"></i> My Bookings
+                        </a>
+                        <a th:href="@{/api/v1/auth/profile}" class="btn btn-outline-success text-start border-0 py-2">
+                            <i class="bi bi-person-circle me-2"></i> User Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-success text-white border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <h6 class="fw-bold"><i class="bi bi-lightning-fill"></i> Fast Booking</h6>
+                    <p class="small mb-0 opacity-75">Click on the route details to see the full route map and stops.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

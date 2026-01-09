@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>My Bookings | GreenBus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold text-success mb-0">
+                <i class="bi bi-journal-bookmark-fill me-2"></i>My Booking History
+            </h2>
+            <p class="text-muted mb-0">Manage your past and upcoming bus journeys</p>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <a th:href="@{/user-dashboard}" class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm">
+                <i class="bi bi-house-door me-2"></i>Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div th:if="${success}" class="alert alert-success bg-white border-0 border-start border-4 border-success shadow-sm alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2 text-success"></i>
+        <span class="text-dark" th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger bg-white border-0 border-start border-4 border-danger shadow-sm alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>
+        <span class="text-dark" th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-success text-white">
+                    <tr>
+                        <th class="ps-4 py-3 fw-semibold">Booking Date</th>
+                        <th class="py-3 fw-semibold">Bus & Route</th>
+                        <th class="py-3 fw-semibold">Departure</th>
+                        <th class="py-3 fw-semibold">Status</th>
+                        <th class="text-end pe-4 py-3 fw-semibold">Manage</th>
+                    </tr>
+                    </thead>
+                    <tbody class="bg-white">
+                    <tr th:each="b : ${bookings}">
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark" th:text="${#temporals.format(b.bookingDate, 'dd MMM yyyy')}"></div>
+                            <small class="text-muted" th:text="${#temporals.format(b.bookingDate, 'HH:mm')}"></small>
+                        </td>
+
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 p-2 rounded-3 me-3 text-success">
+                                    <i class="bi bi-bus-front fs-4"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark" th:text="${b.busSchedule.bus.busNumber}"></div>
+                                    <div class="small text-success fw-medium" th:text="${b.busSchedule.routeStop.route.routeName}"></div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div class="text-dark fw-semibold" th:text="${b.busSchedule.departureTime}"></div>
+                            <small class="text-muted">Local Time</small>
+                        </td>
+
+                        <td>
+                                <span th:class="|badge rounded-pill px-3 py-2 ${b.bookingStatus.name() == 'CANCELLED' ? 'text-danger bg-danger bg-opacity-10 border border-danger border-opacity-25' : 'text-success bg-success bg-opacity-10 border border-success border-opacity-25'}|"
+                                      th:text="${b.bookingStatus}">
+                                </span>
+                        </td>
+
+                        <td class="text-end pe-4">
+                            <form th:if="${b.bookingStatus.name() != 'CANCELLED'}"
+                                  th:action="@{/bookings/cancel}" method="post"
+                                  onsubmit="return confirm('Are you sure you want to cancel this booking?');">
+                                <input type="hidden" name="bookingId" th:value="${b.id}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold shadow-sm">
+                                    <i class="bi bi-x-circle me-1"></i>Cancel Ticket
+                                </button>
+                            </form>
+                            <span th:if="${b.bookingStatus.name() == 'CANCELLED'}" class="text-muted small italic">
+                                    <i class="bi bi-slash-circle me-1"></i>No Actions
+                            </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${#lists.isEmpty(bookings)}" class="text-center py-5">
+                <i class="bi bi-ticket-perforated text-success opacity-25" style="font-size: 4rem;"></i>
+                <h5 class="text-muted mt-3">No bookings found</h5>
+                <p class="text-muted small mb-3">Ready to travel? Check available buses on the dashboard.</p>
+                <a th:href="@{/user-dashboard}" class="btn btn-success btn-sm rounded-pill px-4">Find a Bus</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex justify-content-between align-items-center">
+        <a th:href="@{/user-dashboard}" class="text-success text-decoration-none fw-bold">
+            <i class="bi bi-arrow-left-circle-fill me-2"></i>Back to User Dashboard
+        </a>
+
+        <p class="text-muted small mb-0">
+            <i class="bi bi-info-circle me-1 text-success"></i>
+            Need help? Contact <a href="mailto:support@greenbus.com" class="text-success text-decoration-none fw-bold">Support</a>
+        </p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

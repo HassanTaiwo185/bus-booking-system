@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Manage Route Stops | Bus System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .text-success { color: #2e7d32 !important; }
+        .bg-success-subtle { background-color: #e8f5e9 !important; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-success fw-bold">Active Route Sequences</h3>
+        <a href="/admin-dashboard" class="btn btn-outline-secondary shadow-sm">
+            Back to Dashboard
+        </a>
+    </div>
+
+
+    <div class="container mt-5">
+        <h3 class="text-success fw-bold mb-4">Current Active Routes</h3>
+
+        <div th:each="routeEntry : ${groupedStops}" class="card mb-4 shadow-sm">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0" th:text="${routeEntry.key.routeName}">Route Name</h5>
+                <span class="badge bg-light text-dark" th:text="${routeEntry.key.status}">Status</span>
+
+
+                <span class="badge bg-light text-dark"
+                      th:if="${!routeEntry.value.isEmpty()}"
+                      th:text="${routeEntry.value[0].validFrom}">Valid From</span>
+
+                <span class="badge bg-light text-dark"
+                      th:if="${!routeEntry.value.isEmpty()}"
+                      th:text="${routeEntry.value[0].validTo}">Valid To</span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap align-items-center">
+                    <div th:each="rs, iter : ${routeEntry.value}" class="d-flex align-items-center">
+                        <div class="p-2 border rounded bg-white text-center shadow-sm">
+                            <small class="text-muted d-block" th:text="'Stop ' + ${rs.stopOrder}"></small>
+                            <strong th:text="${rs.stop.stopName}">Stop Name</strong>
+                        </div>
+
+                        <div th:if="${!iter.last}" class="mx-2 text-success">
+                            <i class="bi bi-arrow-right"></i> →
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-top-0">
+                <a th:href="@{/route-stops/create(routeId=${routeEntry.key.id})}" class="btn btn-sm btn-outline-success">
+                    Update Sequence (Create New Version)
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

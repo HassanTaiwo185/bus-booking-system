@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Route Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-white">
+
+<div class="container mt-5">
+
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-success fw-bold mb-0">Route Management</h3>
+
+        <a th:href="@{/admin-dashboard}" class="btn btn-outline-success">
+            ← Back to Dashboard
+        </a>
+    </div>
+
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+
+                    <!-- TABLE HEADER -->
+                    <thead class="table-light border-bottom border-success">
+                    <tr>
+                        <th class="ps-4 text-success">Route Name</th>
+                        <th class="text-success">Status</th>
+                        <th class="text-success">Created By</th>
+                        <th class="text-success">Created At</th>
+                        <th class="text-success text-center pe-4">Actions</th>
+                    </tr>
+                    </thead>
+
+
+                    <tbody>
+                    <tr th:each="route : ${routes}">
+
+                        <td class="ps-4 fw-semibold"
+                            th:text="${route.routeName}">
+                        </td>
+
+                        <td>
+                            <span th:text="${route.status}"
+                                  th:classappend="${route.status.name() == 'ACTIVE'}
+                                        ? 'badge bg-success'
+                                        : 'badge bg-secondary'">
+                            </span>
+                        </td>
+
+                        <td class="text-muted"
+                            th:text="${route.createdBy.email}">
+                        </td>
+
+                        <td class="text-muted"
+                            th:text="${#temporals.format(route.createdAt, 'dd MMM yyyy HH:mm')}">
+                        </td>
+
+                        <td class="pe-4 text-center">
+                            <div class="d-flex justify-content-center gap-2">
+
+
+                                <a th:if="${mode == 'routes'}"
+                                   th:href="@{/routes/{id}/edit(id=${route.id})}"
+                                   class="btn btn-sm btn-success">
+                                    Edit
+                                </a>
+
+                                <a th:if="${mode == 'stops'}"
+                                   th:href="@{/routes/{id}/stops(id=${route.id})}"
+                                   class="btn btn-sm btn-outline-success">
+                                    Manage Stops
+                                </a>
+
+                            </div>
+                        </td>
+
+                    </tr>
+
+
+                    <tr th:if="${#lists.isEmpty(routes)}">
+                        <td colspan="5" class="text-center text-muted py-4">
+                            No routes available
+                        </td>
+                    </tr>
+
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

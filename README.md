@@ -76,7 +76,7 @@ JWT_SECRET=your_jwt_secret_here
 EMAIL_HOST_USER=your_email@gmail.com
 EMAIL_HOST_PASSWORD=your_email_app_password
 
-# Stripe Configuration (Optional)
+# Stripe Configuration 
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 
@@ -116,4 +116,4 @@ Hibernate / JPA
 
 PostgreSQL
 
-Stripe (optional)
+Stripe 

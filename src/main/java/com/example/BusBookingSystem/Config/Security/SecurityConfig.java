@@ -49,8 +49,7 @@ public class SecurityConfig {
                         .requestMatchers("/error","/payment/success").permitAll()
 
                         .requestMatchers("/admin-dashboard").hasRole("ADMIN")
-                        .requestMatchers("/user-dashboard").hasAuthority("USER")
-
+                        .requestMatchers("/user-dashboard").hasRole("USER")
 
                         .requestMatchers("/routes/**").hasRole("ADMIN")
                         .requestMatchers("/stops/**").hasRole("ADMIN")

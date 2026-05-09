@@ -24,15 +24,15 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final RedisTemplate redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
 
-        return path.equals("/api/v1/auth/login") ||
-                path.equals("/api/v1/auth/register") ||
-                path.equals("/api/v1/auth/verify");
+        return path.equals("/api/v1/auth/login")
+                || path.equals("/api/v1/auth/register")
+                || path.equals("/api/v1/auth/verify");
     }
 
     @Override
@@ -42,57 +42,51 @@ public class JwtFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-
-
-        if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String accessToken = getCookie(request, "accessToken");
-        String refreshToken = getCookie(request, "refreshToken");
-
         try {
+
+            String accessToken = getCookie(request, "accessToken");
+            String refreshToken = getCookie(request, "refreshToken");
+
             if (accessToken != null) {
 
-                Boolean isBlacklisted = redisTemplate.hasKey("blacklist:" + accessToken);
-                if (Boolean.TRUE.equals(isBlacklisted)) {
-                    filterChain.doFilter(request, response);
-                    return;
-                }
+                Boolean blacklisted = Boolean.TRUE.equals(
+                        redisTemplate.hasKey("blacklist:" + accessToken)
+                );
 
-                String email = jwtService.getUsernameFromToken(accessToken);
-                UserDetails user = userDetailsService.loadUserByUsername(email);
+                if (!blacklisted) {
 
-                if (jwtService.validateToken(accessToken, user)) {
-                    authenticate(request, user);
-                    filterChain.doFilter(request, response);
-                    return;
+                    String email = jwtService.getUsernameFromToken(accessToken);
+                    UserDetails user = userDetailsService.loadUserByUsername(email);
+
+                    if (jwtService.validateToken(accessToken, user)) {
+                        authenticate(request, user);
+                    }
                 }
             }
 
-            if (refreshToken != null) {
+            if (SecurityContextHolder.getContext().getAuthentication() == null
+                    && refreshToken != null) {
+
                 String email = jwtService.getUsernameFromToken(refreshToken);
                 UserDetails user = userDetailsService.loadUserByUsername(email);
 
                 if (jwtService.validateToken(refreshToken, user)) {
-                    String newAccessToken =
-                            jwtService.generateToken(
-                                   user
-                            );
 
-                    Cookie newAccessTokenCookie = new Cookie("accessToken", newAccessToken);
-                    newAccessTokenCookie.setHttpOnly(true);
-                    newAccessTokenCookie.setSecure(false);
-                    newAccessTokenCookie.setPath("/");
-                    newAccessTokenCookie.setMaxAge(60 * 30);
-                    response.addCookie(newAccessTokenCookie);
+                    String newAccessToken = jwtService.generateToken(user);
+
+                    Cookie cookie = new Cookie("accessToken", newAccessToken);
+                    cookie.setHttpOnly(true);
+                    cookie.setPath("/");
+                    cookie.setMaxAge(60 * 30);
+
+                    response.addCookie(cookie);
 
                     authenticate(request, user);
                 }
             }
 
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            System.out.println("JWT Filter error: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);
@@ -100,6 +94,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private String getCookie(HttpServletRequest request, String name) {
         if (request.getCookies() == null) return null;
+
         for (Cookie cookie : request.getCookies()) {
             if (name.equals(cookie.getName())) {
                 return cookie.getValue();
@@ -109,6 +104,7 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private void authenticate(HttpServletRequest request, UserDetails user) {
+
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(
                         user,

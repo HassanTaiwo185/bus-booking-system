@@ -8,7 +8,10 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -27,29 +30,34 @@ public class StopsImportService {
                 return;
             }
 
-            // Load file from resources
             InputStream inputStream =
                     getClass().getResourceAsStream("/stops.txt");
 
             if (inputStream == null) {
-                throw new RuntimeException("stops.txt not found in resources");
+                System.out.println("stops.txt not found");
+                return;
             }
 
-            BufferedReader br =
-                    new BufferedReader(new InputStreamReader(inputStream));
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(inputStream, StandardCharsets.UTF_8)
+            );
 
             String line;
-            boolean skipFirstLine = true;
+            boolean skipHeader = true;
+
+            List<Stops> stopsList = new ArrayList<>();
 
             while ((line = br.readLine()) != null) {
 
-                // Skip CSV header
-                if (skipFirstLine) {
-                    skipFirstLine = false;
+                // Skip header
+                if (skipHeader) {
+                    skipHeader = false;
                     continue;
                 }
 
-                String[] columns = line.split(",");
+                // Proper CSV split (handles commas inside quotes)
+                String[] columns =
+                        line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
                 if (columns.length < 6) {
                     continue;
@@ -64,34 +72,35 @@ public class StopsImportService {
                 String lonStr =
                         columns[5].replace("\"", "").trim();
 
-                if (stopName.isEmpty()
-                        || latStr.isEmpty()
-                        || lonStr.isEmpty()) {
+                if (stopName.isBlank()
+                        || latStr.isBlank()
+                        || lonStr.isBlank()) {
                     continue;
                 }
-
-                BigDecimal latitude = new BigDecimal(latStr);
-                BigDecimal longitude = new BigDecimal(lonStr);
 
                 Stops stop = new Stops();
 
                 stop.setStopName(stopName);
-                stop.setLatitude(latitude);
-                stop.setLongitude(longitude);
+                stop.setLatitude(new BigDecimal(latStr));
+                stop.setLongitude(new BigDecimal(lonStr));
                 stop.setCreatedDate(Instant.now());
 
-                stopsRepository.save(stop);
+                stopsList.add(stop);
             }
 
-            System.out.println("Stops imported successfully");
+            stopsRepository.saveAll(stopsList);
+
+            System.out.println(
+                    "Imported " + stopsList.size() + " stops successfully"
+            );
 
         } catch (Exception e) {
 
+            // Don't crash deployment
             e.printStackTrace();
 
-            throw new RuntimeException(
-                    "Failed to import GTFS stops",
-                    e
+            System.out.println(
+                    "GTFS import failed but application will continue running"
             );
         }
     }

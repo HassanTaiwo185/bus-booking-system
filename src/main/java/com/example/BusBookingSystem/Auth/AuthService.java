@@ -13,8 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -22,8 +21,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -31,100 +32,89 @@ import java.util.concurrent.ThreadLocalRandom;
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final JavaMailSender mailSender;
     private final StringRedisTemplate redisTemplate;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate = new RestTemplate();
 
+
+    // Send email via Brevo HTTP API (works on all platforms, no SMTP needed)
+    private void sendBrevoEmail(String to, String subject, String text) {
+        String apiKey = System.getenv("BREVO_API_KEY");
+        String url = "https://api.brevo.com/v3/smtp/email";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("api-key", apiKey);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("sender", Map.of("email", "ayindehassan776@gmail.com", "name", "BusBooking"));
+        body.put("to", List.of(Map.of("email", to)));
+        body.put("subject", subject);
+        body.put("textContent", text);
+
+        restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+    }
 
 
     public void verifyDetails(RegisterRequestDTO registerRequestDTO) {
 
-
         // Verify if email does not exist
         if (userRepository.findByEmail(registerRequestDTO.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already exists");
-
         }
-
 
         // Verify if password and equal password match
         if (!registerRequestDTO.getPassword().equals(registerRequestDTO.getConfirmPassword())) {
             throw new IllegalArgumentException("Passwords do not match");
         }
 
-
         // Check if valid role is choosen
         if (registerRequestDTO.getRole() != Role.USER && registerRequestDTO.getRole() != Role.ADMIN) {
             throw new IllegalArgumentException("Invalid role selected");
         }
+
         String email = registerRequestDTO.getEmail();
-
-
-
-
         String lockKey = "verify:lock:" + email;
         String codeKey = "verify:code:" + email;
         String userKey = "verify:user:" + email;
 
-
         Boolean lockAcquired = redisTemplate.opsForValue()
                 .setIfAbsent(lockKey, "LOCK", Duration.ofSeconds(30));
 
-
         if (Boolean.FALSE.equals(lockAcquired)) {
-            throw new IllegalStateException(
-                    "Verification already in progress. Please wait."
-            );
+            throw new IllegalStateException("Verification already in progress. Please wait.");
         }
 
         String code = generateCode();
 
-
         // Store verification code (1 min)
-        redisTemplate.opsForValue()
-                .set(codeKey, code, Duration.ofMinutes(1));
+        redisTemplate.opsForValue().set(codeKey, code, Duration.ofMinutes(1));
 
-
-      // Store user temporarily (5 min)
+        // Store user temporarily (5 min)
         try {
             String userJson = objectMapper.writeValueAsString(registerRequestDTO);
-            redisTemplate.opsForValue()
-                    .set(userKey, userJson, Duration.ofMinutes(5));
+            redisTemplate.opsForValue().set(userKey, userJson, Duration.ofMinutes(5));
         } catch (JsonProcessingException e) {
             redisTemplate.delete(lockKey); // cleanup on failure
             throw new RuntimeException("Failed to store user temporarily");
         }
 
-
-        // Send email
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(registerRequestDTO.getEmail());
-        message.setSubject("Verification Code");
-        message.setText(
-                "Your verification code is: " + code +
-                        "\n\nThis code will expire in a minute."
+        // Send email via Brevo API
+        sendBrevoEmail(
+                registerRequestDTO.getEmail(),
+                "Verification Code",
+                "Your verification code is: " + code + "\n\nThis code will expire in a minute."
         );
-
-
-        // Send mail to user
-        mailSender.send(message);
-
     }
 
 
     public String generateCode() {
-        return String.valueOf(
-                ThreadLocalRandom.current().nextInt(100000, 999999)
-        );
-
+        return String.valueOf(ThreadLocalRandom.current().nextInt(100000, 999999));
     }
-
-
-
 
 
     // This function verify if the correct verification code is entered for that email
@@ -138,26 +128,18 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid or expired code");
         }
 
+        String userJson = redisTemplate.opsForValue().get("verify:user:" + email);
 
-
-        String userJson = redisTemplate.opsForValue()
-                .get("verify:user:" + email);
-
-
-        // Check if  Registration has expired
+        // Check if Registration has expired
         if (userJson == null) {
             throw new IllegalArgumentException("Registration expired");
         }
 
         try {
-            RegisterRequestDTO registerDTO =
-                    objectMapper.readValue(userJson, RegisterRequestDTO.class);
-
+            RegisterRequestDTO registerDTO = objectMapper.readValue(userJson, RegisterRequestDTO.class);
             User user = userMapper.registerDtoToEntity(registerDTO);
             user.setPassword(passwordEncoder.encode(user.getPassword()));
-
             userRepository.save(user);
-
         } catch (Exception e) {
             throw new RuntimeException("Failed to create user");
         }
@@ -169,12 +151,8 @@ public class AuthService {
     }
 
 
-    // Function or method verify user credentials and provide access ad refresh token
+    // Function or method verify user credentials and provide access and refresh token
     public LoginResponseDto login(LoginRequestDTO loginRequestDTO) {
-
-        String email = loginRequestDTO.getEmail();
-        String password = loginRequestDTO.getPassword();
-
 
         // Verify provided user credentials
         Authentication authentication = authenticationManager.authenticate(
@@ -190,12 +168,11 @@ public class AuthService {
         String refreshToken = jwtService.generateRefreshToken(user);
         String role = user.getRole().toString();
 
-        return  LoginResponseDto.builder()
+        return LoginResponseDto.builder()
                 .accessToken(accesstoken)
                 .refreshToken(refreshToken)
                 .role(role)
                 .build();
-
     }
 
     public void updateUserDetails(UserUpdateRequestDTO dto, String email) {
@@ -250,21 +227,17 @@ public class AuthService {
         User user = userRepository.findByEmail(currentEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-
         if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Current password is incorrect");
         }
-
 
         if (!dto.getNewPassword().equals(dto.getConfirmNewPassword())) {
             throw new IllegalArgumentException("New passwords do not match");
         }
 
-
         if (passwordEncoder.matches(dto.getNewPassword(), user.getPassword())) {
             throw new IllegalArgumentException("New password cannot be the same as the old password");
         }
-
 
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         userRepository.save(user);
@@ -280,61 +253,41 @@ public class AuthService {
             throw new IllegalArgumentException("Passwords do not match");
         }
 
-
         String email = dto.getEmail();
         String lockKey = "verify:lock:" + email;
         String codeKey = "verify:code:" + email;
         String resetKey = "verify:reset:" + email;
 
         Boolean lockAcquired = redisTemplate.opsForValue().setIfAbsent(lockKey, "LOCK", Duration.ofSeconds(30));
-        if(Boolean.FALSE.equals(lockAcquired)) {
+        if (Boolean.FALSE.equals(lockAcquired)) {
             throw new IllegalStateException("Verification already in progress");
-
         }
 
-        try{
+        try {
             String code = generateCode();
             redisTemplate.opsForValue().set(codeKey, code, Duration.ofSeconds(30));
 
-
-            PasswordResetTemp temp = new PasswordResetTemp(
-                    email,
-                    passwordEncoder.encode(dto.getPassword())
-            );
-
+            PasswordResetTemp temp = new PasswordResetTemp(email, passwordEncoder.encode(dto.getPassword()));
             String tempJson = objectMapper.writeValueAsString(temp);
+            redisTemplate.opsForValue().set(resetKey, tempJson, Duration.ofMinutes(5));
 
-            redisTemplate.opsForValue()
-                    .set(resetKey, tempJson, Duration.ofMinutes(5));
-
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(dto.getEmail());
-            message.setSubject("Verification Code");
-            message.setText(
-                    "Your verification code is: " + code +
-                            "\n\nThis code will expire in a minute."
+            // Send email via Brevo API
+            sendBrevoEmail(
+                    dto.getEmail(),
+                    "Verification Code",
+                    "Your verification code is: " + code + "\n\nThis code will expire in a minute."
             );
 
-            mailSender.send(message);
-
-
-
-
-
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to start password reset");
         } finally {
             redisTemplate.delete(lockKey);
         }
-
-
-
     }
 
     public void verifyForgotPasswordCode(VerifyCodeRequestDTO dto) {
 
         String email = dto.getEmail();
-
         String codeKey = "verify:code:" + email;
         String resetKey = "verify:reset:" + email;
 
@@ -351,15 +304,13 @@ public class AuthService {
         }
 
         try {
-            PasswordResetTemp temp =
-                    objectMapper.readValue(resetJson, PasswordResetTemp.class);
+            PasswordResetTemp temp = objectMapper.readValue(resetJson, PasswordResetTemp.class);
 
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             user.setPassword(temp.getHashedPassword());
             userRepository.save(user);
-
 
             redisTemplate.delete(codeKey);
             redisTemplate.delete(resetKey);
@@ -368,9 +319,4 @@ public class AuthService {
             throw new RuntimeException("Failed to reset password");
         }
     }
-
-
-
-
-
 }

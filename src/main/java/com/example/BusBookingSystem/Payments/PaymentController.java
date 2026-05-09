@@ -46,6 +46,7 @@ public class PaymentController {
 
         model.addAttribute("total", totalAmount);
 
-        return "payment-result";
+        return "redirect:/user-dashboard";
+
     }
 }

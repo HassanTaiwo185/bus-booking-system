@@ -46,7 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/verify","/api/v1/auth/forgot-password", "/api/v1/auth/forgot-verify").permitAll()
                         .requestMatchers("/api/v1/auth/logout").authenticated()
                         .requestMatchers("/api/v1/auth/profile", "/api/v1/auth/update-details", "/api/v1/auth/change-password").authenticated()
-                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/error","/payment/success").permitAll()
 
                         .requestMatchers("/admin-dashboard").hasRole("ADMIN")
                         .requestMatchers("/user-dashboard").hasRole("USER")

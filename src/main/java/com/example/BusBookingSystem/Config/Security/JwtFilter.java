@@ -49,9 +49,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             if (accessToken != null) {
 
-                Boolean blacklisted = Boolean.TRUE.equals(
-                        redisTemplate.hasKey("blacklist:" + accessToken)
-                );
+                Boolean blacklisted = redisTemplate.hasKey("blacklist:" + accessToken);
 
                 if (!blacklisted) {
 

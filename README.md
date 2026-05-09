@@ -1,128 +1,197 @@
-Bus Booking & Management System
+# Bus Booking & Management System
 
-Spring Boot MVC | Thymeleaf | Role-Based Access Control | JWT Authentication
+> A full-stack bus management platform with role-based access, seat booking, and Stripe payment integration — built with Java Spring Boot and deployed via Docker on Render.
 
-A full-stack Bus Management and Booking System built using Java Spring Boot (MVC) with Thymeleaf for server-side rendering.
-This project demonstrates real-world backend architecture, secure role-based access control, and a fully normalized relational database design suitable for production-grade systems.
+🔗 **Live Demo:** https://bus-booking-system-kvve.onrender.com/api/v1/auth/login
 
-Features Overview
-Role-Based Access Control (RBAC)
+> ⚠️ First load may take 30–60 seconds — the server spins down on inactivity (free tier).
+> Use role selection on the login page to explore either Admin or Customer features.
 
-The application supports two roles:
+---
 
-ADMIN
+## What it does
 
-CUSTOMER (User)
+A production-deployed bus management system that handles the full lifecycle of bus travel — from an admin scheduling routes and buses, to a customer searching, booking, paying, and cancelling a seat.
 
-For tutorial and learning purposes, users can choose which role they want to explore after authentication.
+The project was built to demonstrate real-world backend architecture: normalized relational database design, secure RBAC, payment processing, and containerized deployment — the kind of system you'd find in a real transport company's backend.
 
-Authentication & Security
+---
 
-JWT-based authentication
+## Features
 
-Spring Security integration
+### Admin
+- Create and manage buses (capacity, status)
+- Create routes and assign stops with ordering
+- Schedule buses on routes with departure times
+- View and manage all bookings across all users
+- Enable or disable routes and buses
 
-Secure password hashing (raw passwords are never stored)
+### Customer
+- Register, verify email, and log in
+- Browse available bus schedules
+- Book a seat on a schedule
+- Pay for a booking via **Stripe** (test mode)
+- View full booking history
+- Cancel a booking (based on booking status rules)
 
-Role-based endpoint protection
+### Security & Auth
+- JWT-based stateless authentication
+- Spring Security with role-based endpoint protection
+- Passwords hashed — raw passwords never stored
+- Secure cookie handling for HTTPS in production
+- Secrets managed via environment variables — never committed
 
-Admin Capabilities
+---
 
-Admins have full control over the system:
+## Tech stack
 
-Manage buses
+| Layer | Technology |
+|---|---|
+| Language | Java 17 |
+| Framework | Spring Boot, Spring MVC |
+| Auth & Security | Spring Security, JWT |
+| Templating | Thymeleaf (server-side rendering) |
+| ORM | Hibernate / JPA |
+| Database | PostgreSQL |
+| Payments | Stripe API |
+| Email | JavaMail |
+| Containerization | Docker |
+| Deployment | Render (Docker container) |
 
-Create and manage routes
+---
 
-Assign stops to routes
+## Architecture
 
-Schedule buses
+```
+Browser ──── HTTP ────► Spring MVC Controllers
+                              │
+                        Spring Security
+                        (JWT filter, RBAC)
+                              │
+                         Service Layer
+                              │
+                    JPA Repositories ────► PostgreSQL
+                              │
+                         Stripe API (payments)
+                         JavaMail (email)
+```
 
-View and manage all bookings (any user, any status)
+Key design decisions:
+- **MVC with Thymeleaf** — server-side rendering keeps the frontend and backend in one deployable unit, simplifying the architecture for a project focused on backend depth.
+- **Normalized relational schema** — routes, stops, buses, schedules, bookings, and users are modelled as separate entities with proper foreign key relationships rather than denormalized shortcuts.
+- **Role-based endpoint protection** — Spring Security intercepts every request; endpoints are explicitly mapped to `ADMIN` or `CUSTOMER` roles. No endpoint is accidentally public.
+- **Docker deployment** — the entire application is containerized with a `Dockerfile` and deployed on Render, making the environment reproducible and the deployment repeatable.
 
-Enable or disable routes and buses
+---
 
-Customer Capabilities
+## Local setup
 
-Customers can:
+### Prerequisites
+- Java 17+
+- Maven
+- PostgreSQL
+- A Stripe account (for payment features)
 
-Register and log in
-
-View all available bus schedules
-
-Book seats
-
-Complete payments using Stripe
-
-View booking history
-
-Cancel bookings based on booking status
-
-Live url
-
-
-https://bus-booking-system-kvve.onrender.com/api/v1/auth/login 
-
-Getting Started (Local Setup)
-1. Clone the Repository
+### 1. Clone the repo
+```bash
 git clone https://github.com/HassanTaiwo185/bus-booking-system
 cd bus-booking-system
+```
 
-2. Create .env File
-
-Create a .env file in the project root and add the following:
-
-# Database Configuration
+### 2. Create a `.env` file in the project root
+```
+# Database
 DB_URL=jdbc:postgresql://localhost:5432/bus_booking_db
 DB_USERNAME=postgres
 DB_PASSWORD=postgres
 
-# JWT Configuration
-JWT_SECRET=your_jwt_secret_here
+# JWT
+JWT_SECRET=your-256-bit-secret-key
 
-# Email Configuration
-EMAIL_HOST_USER=your_email@gmail.com
-EMAIL_HOST_PASSWORD=your_email_app_password
+# Email
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
 
-# Stripe Configuration
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+# Stripe
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
 
-3. Generate Your Own Secrets
+**Getting your keys:**
+- JWT secret — generate any random 256-bit string
+- Stripe keys — from your [Stripe Dashboard](https://dashboard.stripe.com/apikeys) (use test keys locally)
+- Email password — use a [Gmail App Password](https://myaccount.google.com/apppasswords), not your real password
 
-JWT Secret
-Generate a secure random key (minimum 256-bit).
+### 3. Create the database
+```bash
+psql -U postgres -c "CREATE DATABASE bus_booking_db;"
+```
 
-Stripe Keys
-Obtain keys from the Stripe Dashboard.
+### 4. Run the app
+```bash
+./mvnw spring-boot:run
+```
 
-Email Password
-Use an email App Password, not your real email password.
+App runs at `http://localhost:8080`
 
-Important Security Notes
+---
 
-Do NOT commit .env files
+## Running with Docker
 
-Never expose real secrets on GitHub
+```bash
+docker build -t bus-booking-system .
+docker run -p 8080:8080 --env-file .env bus-booking-system
+```
 
-Ensure .env is added to .gitignore
+Or with Docker Compose (includes PostgreSQL):
+```bash
+docker-compose up
+```
 
-Tech Stack
+---
 
-Java 17+
+## Exploring the live demo
 
-Spring Boot
+The login page lets you choose a role — Admin or Customer — for demonstration purposes.
 
-Spring MVC
+**To test the customer flow:**
+1. Register a new account
+2. Verify your email
+3. Browse available schedules
+4. Book a seat and pay using Stripe test card `4242 4242 4242 4242` (any future date, any CVV)
+5. View your booking history and try cancelling
 
-Spring Security
+**To test the admin flow:**
+1. Select Admin on the login page
+2. Create a bus, then a route with stops
+3. Schedule the bus on the route
+4. View all customer bookings
 
-Thymeleaf
+---
 
-JWT
+## Project structure
 
-Hibernate / JPA
+```
+src/
+└── main/
+    ├── java/
+    │   └── com/bus/
+    │       ├── auth/           # JWT filter, Spring Security config
+    │       ├── booking/        # Booking service, controller, entity
+    │       ├── bus/            # Bus management
+    │       ├── route/          # Route + stop management
+    │       ├── schedule/       # Schedule management
+    │       ├── payment/        # Stripe integration
+    │       └── user/           # User entity, registration, roles
+    └── resources/
+        └── templates/          # Thymeleaf HTML templates
+```
 
-PostgreSQL
+---
 
-Stripe Payments
+## Security notes
+
+- `.env` is excluded from version control via `.gitignore`
+- JWT tokens are validated on every protected request via a Spring Security filter
+- Stripe is configured in test mode locally — no real charges are made
+- Cookie `Secure` flag is enforced in the production (HTTPS) environment

@@ -20,70 +20,134 @@ public class BookingsController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/list")
     public String listBookings(Model model) {
-        model.addAttribute("bookings", bookingsService.findAll());
+
+        model.addAttribute(
+                "bookings",
+                bookingsService.findAll()
+        );
+
         return "bookings-list";
     }
 
+
     @PreAuthorize("hasRole('USER')")
     @GetMapping("/my-history")
-    public String myHistory(Model model, RedirectAttributes ra) {
-        try {
-            model.addAttribute("bookings", bookingsService.getMyBookingHistory());
-            return "bookings-my-list";
-        } catch (RuntimeException e) {
-            ra.addFlashAttribute("error", e.getMessage());
-            return "redirect:/user-dashboard";
-        }
+    public String myHistory(Model model) {
+
+        model.addAttribute(
+                "bookings",
+                bookingsService.getMyBookingHistory()
+        );
+
+        return "bookings-my-list";
     }
 
 
     @PreAuthorize("hasRole('USER')")
     @GetMapping("/new")
-    public String createBookingPage(@RequestParam(required = false) Long scheduleId, Model model) {
+    public String createBookingPage(
+            @RequestParam(required = false) Long scheduleId,
+            Model model
+    ) {
+
         if (!model.containsAttribute("bookingRequest")) {
+
             BookingRequestDto dto = new BookingRequestDto();
+
             dto.setBusScheduleId(scheduleId);
-            model.addAttribute("bookingRequest", dto);
+
+            model.addAttribute(
+                    "bookingRequest",
+                    dto
+            );
         }
+
         return "bookings-create";
     }
 
 
     @PreAuthorize("hasRole('USER')")
     @PostMapping("/create")
-    public String createBooking(@Valid @ModelAttribute("bookingRequest") BookingRequestDto dto,
-                                BindingResult result,
-                                RedirectAttributes ra) {
+    public String createBooking(
+            @Valid @ModelAttribute("bookingRequest")
+            BookingRequestDto dto,
+
+            BindingResult result,
+
+            RedirectAttributes ra
+    ) {
 
         if (result.hasErrors()) {
-            ra.addFlashAttribute("org.springframework.validation.BindingResult.bookingRequest", result);
-            ra.addFlashAttribute("bookingRequest", dto);
-            return "redirect:/bookings/new?scheduleId=" + dto.getBusScheduleId();
+
+            ra.addFlashAttribute(
+                    "org.springframework.validation.BindingResult.bookingRequest",
+                    result
+            );
+
+            ra.addFlashAttribute(
+                    "bookingRequest",
+                    dto
+            );
+
+            return "redirect:/bookings/new?scheduleId="
+                    + dto.getBusScheduleId();
         }
 
         try {
-            Long bookingId = bookingsService.createBooking(dto);
-            ra.addFlashAttribute("Pending", "Booking initiated! Please check your email.");
 
-            return "redirect:/payment/create-session/" + bookingId;
+            Long bookingId =
+                    bookingsService.createBooking(dto);
+
+            ra.addFlashAttribute(
+                    "success",
+                    "Booking initiated successfully!"
+            );
+
+            return "redirect:/payment/create-session/"
+                    + bookingId;
+
         } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
-            ra.addFlashAttribute("bookingRequest", dto);
-            return "redirect:/bookings/new?scheduleId=" + dto.getBusScheduleId();
+
+            ra.addFlashAttribute(
+                    "error",
+                    e.getMessage()
+            );
+
+            ra.addFlashAttribute(
+                    "bookingRequest",
+                    dto
+            );
+
+            return "redirect:/bookings/new?scheduleId="
+                    + dto.getBusScheduleId();
         }
     }
 
 
     @PreAuthorize("hasRole('USER')")
     @PostMapping("/cancel")
-    public String cancelBooking(@ModelAttribute CancelBookingsRequestDto cancelRequest,
-                                RedirectAttributes ra) {
+    public String cancelBooking(
+            @ModelAttribute CancelBookingsRequestDto cancelRequest,
+            RedirectAttributes ra
+    ) {
+
         try {
+
             bookingsService.cancelBooking(cancelRequest);
-            ra.addFlashAttribute("success", "Booking cancelled successfully.");
+
+            ra.addFlashAttribute(
+                    "success",
+                    "Booking cancelled successfully."
+            );
+
         } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
+
+            ra.addFlashAttribute(
+                    "error",
+                    e.getMessage()
+            );
         }
+
         return "redirect:/bookings/my-history";
     }
 }
